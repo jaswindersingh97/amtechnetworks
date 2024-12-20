@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { registerUser, findUserByUsername, findUserByEmail } = require('../models/userModel');
-
+const axios = require('axios');
 // Render Registration Page
 const renderRegisterPage = (req, res) => {
   res.render('register');  // Renders the registration form
@@ -25,63 +25,73 @@ const logout = (req, res) => {
 };
 
 // Registration Handler
-const register = async (req, res) => {
+const asyncHandler = require('express-async-handler');
+
+const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
-  try {
-    // Check if email or username already exists
-    const existingEmail = await findUserByEmail(email);
-    const existingUsername = await findUserByUsername(username);
+  const existingEmail = await findUserByEmail(email);
+  const existingUsername = await findUserByUsername(username);
 
-    if (existingEmail) {
-      return res.status(400).json({ message: "Email already exists." });
-    }
-    if (existingUsername) {
-      return res.status(400).json({ message: "Username already exists." });
-    }
-
-    // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Register user in the database
-    const user = await registerUser(username, email, hashedPassword);
-    res.status(201).json({ message: "User registered successfully. Please log in." });
-  } catch (error) {
-    res.status(500).json({ message: "Error registering user.", error });
+  if (existingEmail || existingUsername) {
+    res.status(400);
+    throw new Error("Email or Username already exists.");
   }
-};
 
-// Login Handler
-const login = async (req, res) => {
-  const { username, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await registerUser(username, email, hashedPassword);
 
-  try {
-    const user = await findUserByUsername(username);
-    if (!user) {
-      return res.status(400).json({ message: "Invalid username or password." });
-    }
+  res.status(201).json({ message: "User registered successfully. Please log in." });
+});
 
-    // Compare password with the hashed password
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(400).json({ message: "Invalid username or password." });
-    }
-
-    // Create JWT token
-    const token = jwt.sign(
-      { id: user.id, username: user.username, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
+  const verifyRecaptcha = async (recaptchaToken) => {
+    const response = await axios.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        null,
+        {
+            params: {
+                secret: process.env.RECAPTCHA_SECRET_KEY,
+                response: recaptchaToken,
+            },
+        }
     );
+    return response.data.success;
+  };
 
-    // Set JWT token in a cookie
-    res.cookie('token', token, { httpOnly: true, maxAge: 15 * 60 * 1000 });
-    res.redirect('/auth/profile');
-    // res.status(200).json({ message: "Login successful", token });
-  } catch (error) {
-    res.status(500).json({ message: "Error logging in.", error });
+
+  //login route
+  const login = asyncHandler(async (req, res) => {
+  const { username, password, 'g-recaptcha-response': recaptchaToken } = req.body;
+  //verify recaptcha
+  const isHuman = await verifyRecaptcha(recaptchaToken);
+  if (!isHuman) {
+      res.status(400);
+      throw new Error('reCAPTCHA verification failed. Please try again.');
   }
-};
+  // Check username
+  const user = await findUserByUsername(username);
+  if (!user) {
+    res.status(400);
+    throw new Error("Invalid username or password.");
+  }
+  // Compare password
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    res.status(400);
+    throw new Error("Invalid username or password.");
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { id: user.id, username: user.username, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+
+  // Set token in cookie
+  res.cookie('token', token, { httpOnly: true, maxAge: 15 * 60 * 1000 });
+  res.redirect('/auth/profile');
+});
 
 module.exports = {
   renderRegisterPage,

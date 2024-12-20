@@ -13,9 +13,18 @@ app.use(express.urlencoded({extended: true}));
 app.set('view engine','ejs');
 app.use(express.static('public'));
 
+app.use((err, req, res, next) => {
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    res.status(statusCode).json({
+      message: err.message,
+      stack: process.env.NODE_ENV === "production" ? null : err.stack,
+    });
+  });  
+
 app.get("/helloworld", (req, res) => {
     res.send("Hello World");    
 });
+
 
 const authRoutes = require("./endpoints/authRoutes");
 app.use("/auth", authRoutes);

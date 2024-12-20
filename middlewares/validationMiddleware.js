@@ -9,7 +9,6 @@ const registerValidation = [
   check('email')
     .isEmail().withMessage('Email is required and must be valid')
     .isLength({ max: 100 }).withMessage('Email must be less than 100 characters'),
-  
   check('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
 ];
