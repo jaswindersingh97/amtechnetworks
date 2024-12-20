@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
 </head>
 <body>
-  <h1>Welcome, <%= user.name %>!</h1>
-  <p>Your email: <%= user.email %></p>
-  <p>your id :<%= user.id %></p>
-  <a href="/logout">Logout</a>
+    <h1>Profile</h1>
+    <p>Username: <%= user.username %></p>
+    <p>Email: <%= user.email %></p>
+    <p>Account Created At: <%= user.created_at %></p>
+
+    <form action="/auth/logout" method="POST">
+        <button type="submit">Logout</button>
+    </form>
 </body>
 </html>

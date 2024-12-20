@@ -1,65 +1,35 @@
-const db = require('../config/db'); // Database connection
+const db = require('../config/db');
 
-// Function to create a new user
-
-const createTable = async () => {
-  const query = `
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username VARCHAR(50) NOT NULL,
-      email VARCHAR(100) NOT NULL,
-      password VARCHAR(255) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  try {
-    await db.query(query);
-    console.log('Table created or already exists.');
-  } catch (error) {
-    console.error('Error creating table:', error);
-  }
-};
-
-
-const createUser = async (username, email, hashedPassword) => {
+// Create a new user
+const registerUser = async (username, email, password) => {
   const query = `
     INSERT INTO users (username, email, password)
     VALUES ($1, $2, $3)
-    RETURNING id, username, email, created_at;
+    RETURNING id, username, email;
   `;
-  const values = [username, email, hashedPassword];
+  const values = [username, email, password];
   const result = await db.query(query, values);
   return result.rows[0];
 };
 
-// Function to find a user by email or username
-const findUserByEmailOrUsername = async (identifier) => {
-  const query = `
-    SELECT id, username, email, password
-    FROM users
-    WHERE email = $1 OR username = $1;
-  `;
-  const values = [identifier];
+// Find user by email
+const findUserByEmail = async (email) => {
+  const query = `SELECT * FROM users WHERE email = $1`;
+  const values = [email];
   const result = await db.query(query, values);
   return result.rows[0];
 };
 
-// Function to get a user's profile details
-const getUserById = async (userId) => {
-  const query = `
-    SELECT id, username, email, created_at
-    FROM users
-    WHERE id = $1;
-  `;
-  const values = [userId];
+// Find user by username
+const findUserByUsername = async (username) => {
+  const query = `SELECT * FROM users WHERE username = $1`;
+  const values = [username];
   const result = await db.query(query, values);
   return result.rows[0];
 };
 
-// Export the functions
 module.exports = {
-  createUser,
-  findUserByEmailOrUsername,
-  getUserById,
-  createTable
+  registerUser,
+  findUserByEmail,
+  findUserByUsername
 };
