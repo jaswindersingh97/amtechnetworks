@@ -83,7 +83,7 @@ const register = asyncHandler(async (req, res) => {
 
   // Generate JWT token
   const token = jwt.sign(
-    { id: user.id, username: user.username, email: user.email },
+    { id: user.id, username: user.username, email: user.email ,created_at: user.created_at},
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
